@@ -1,0 +1,82 @@
+<div xmlns:th="http://www.thymeleaf.org"
+     xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+     th:fragment="content" class="container mt-5">
+            <h1 class="mb-4">Gestão de Produtos</h1>
+
+            <!-- Botão para abrir o formulário -->
+            <button sec:authorize="hasRole('ADMIN')" class="btn btn-primary mb-3" data-bs-toggle="collapse" data-bs-target="#formularioProduto">
+                Novo Produto
+            </button>
+
+            <!-- Formulário de Cadastro -->
+            <div sec:authorize="hasRole('ADMIN')" class="collapse" id="formularioProduto">
+                <div class="card card-body">
+                    <form th:action="@{/produtos}" th:object="${produto}" method="post" id="produtoForm">
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome do Produto</label>
+                            <input type="text" id="nome" th:field="*{nome}" class="form-control" placeholder="Nome do Produto" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tipo" class="form-label">Tipo do Produto</label>
+                            <select id="tipo" th:field="*{tipo}" class="form-select" required>
+                                <option value="" disabled selected>Selecione o Tipo</option>
+                                <option value="Pizza">Pizza</option>
+                                <option value="Lanche">Lanche</option>
+                                <option value="Bebida">Bebida</option>
+                                <option value="Porção">Porção</option>
+                                <option value="Adicional">Adicional</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="preco" class="form-label">Preço</label>
+                            <input type="number" id="preco" th:field="*{preco}" class="form-control" placeholder="Preço (R$)" step="0.01" required>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input type="checkbox" id="ativo" th:field="*{ativo}" class="form-check-input">
+                            <label for="ativo" class="form-check-label">Produto Ativo</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-success">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Listagem de Produtos -->
+            <table class="table table-bordered table-striped mt-3">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>Preço</th>
+                        <th>Ativo</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loop para listar os produtos -->
+                    <tr th:each="produto : ${produtos}">
+                        <td th:text="${produto.id}"></td>
+                        <td th:text="${produto.nome}"></td>
+                        <td th:text="${produto.tipo}"></td>
+                        <td th:text="${#numbers.formatDecimal(produto.preco, 1, 'COMMA', 2, 'POINT')}"></td>
+                        <td th:text="${produto.ativo ? 'Sim' : 'Não'}">Sim</td>
+                        <td>
+                            <form sec:authorize="hasRole('ADMIN')" th:action="@{/produtos/{id}/status(id=${produto.id})}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-warning btn-sm"
+                                        th:text="${produto.ativo} ? 'Desativar' : 'Ativar'"></button>
+                            </form>
+                            <form sec:authorize="hasRole('ADMIN')" th:action="@{/produtos/{id}/excluir(id=${produto.id})}" method="post" class="d-inline"
+                                  onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
+                                <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+</div>

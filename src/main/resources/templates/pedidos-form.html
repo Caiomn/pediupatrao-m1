@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Novo pedido</title></head>
+<body>
+<div th:fragment="content">
+    <h2>Novo pedido</h2>
+    <div class="alert alert-warning" role="alert" th:if="${#lists.isEmpty(produtos.?[ativo == true])}">
+        Não há produtos ativos para selecionar. Peça a um ADMIN para ativar ou cadastrar um produto em Produtos.
+    </div>
+    <form th:action="@{/pedidos}" th:object="${pedidoForm}" method="post">
+        <div>
+            <label for="cliente">Cliente</label>
+            <select id="cliente" th:field="*{clienteId}" required>
+                <option value="">Selecione</option>
+                <option th:each="cliente : ${clientes}" th:value="${cliente.id}"
+                        th:text="${cliente.nome}"></option>
+            </select>
+            <p th:if="${#fields.hasErrors('clienteId')}" th:errors="*{clienteId}"></p>
+        </div>
+        <div th:each="item, iter : *{itens}">
+            <label th:for="${'produto-' + iter.index}">Produto</label>
+            <select th:id="${'produto-' + iter.index}" th:field="*{itens[__${iter.index}__].produtoId}" required>
+                <option value="">Selecione</option>
+                <option th:each="produto : ${produtos}" th:if="${produto.ativo}"
+                        th:value="${produto.id}" th:text="${produto.nome + ' - R$ ' + produto.preco}"></option>
+            </select>
+            <label th:for="${'qtde-' + iter.index}">Quantidade</label>
+            <input th:id="${'qtde-' + iter.index}" type="number" min="1"
+                   th:field="*{itens[__${iter.index}__].qtde}" required>
+            <p th:if="${#fields.hasErrors('itens[' + iter.index + '].produtoId')}"
+               th:errors="*{itens[__${iter.index}__].produtoId}"></p>
+        </div>
+        <p>O preço será consultado no cadastro do produto e o total calculado no servidor.</p>
+        <button type="submit">Registrar pedido</button>
+        <a th:href="@{/pedidos}">Cancelar</a>
+    </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>Auditoria</title></head>
+<body>
+<div th:fragment="content">
+    <h2>Auditoria</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead><tr><th>Data/hora</th><th>Usuário</th><th>Perfil</th><th>Operação</th>
+                <th>Entidade</th><th>ID</th><th>Campos</th><th>Justificativa</th></tr></thead>
+            <tbody>
+            <tr th:each="log : ${auditorias}">
+                <td th:text="${log.dataHora}"></td><td th:text="${log.usuarioLogado}"></td>
+                <td th:text="${log.perfilUsuario}"></td><td th:text="${log.tipoOperacao}"></td>
+                <td th:text="${log.entidadeAfetada}"></td><td th:text="${log.identificadorEntidade}"></td>
+                <td><span th:each="campo : ${log.camposModificados}">
+                    <span th:text="${campo.key + ': ' + campo.value.valorAnterior + ' → ' + campo.value.novoValor}"></span><br>
+                </span></td>
+                <td th:text="${log.justificativa}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(auditorias)}"><td colspan="8">Nenhum registro de auditoria.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
