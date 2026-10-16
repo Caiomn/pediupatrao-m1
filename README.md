@@ -10,7 +10,7 @@ Este repositório contém a evolução individual do projeto "PediuPatrão", des
 * **Frontend:** Thymeleaf, HTML5, CSS3
 * **Gestão de Dependências:** Maven
 
-## 🚀 Requisitos Implementados (Rubrica)
+## 🚀 Requisitos Implementados 
 
 * **[RF01] Controlo de Utilizadores e Permissões:** Implementação dos perfis `ADMIN`, `GERENTE` e `ATENDENTE`. A proteção foi aplicada ao nível do *backend* (Spring Security), bloqueando tentativas de autoelevação e acessos indevidos via rotas (HTTP 403).
 * **[RF02] Evolução do Cadastro de Pedidos:** Registo detalhado de itens e quantidades, com o cálculo do valor total executado estritamente no servidor, impedindo manipulações via requisições HTTP.
