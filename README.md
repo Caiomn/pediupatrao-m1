@@ -1,4 +1,4 @@
-# 🍕 Sistema PediuPatrão - Atividade Prática M1
+# 🍕 Atividade Prática: Dashboard Administrativo
 Vídeo do YouTube. Lembrando: foi gravado sem áudio, pois estou sem microfone:  https://youtu.be/D9CFRSZQpPo?si=zBT43qrSOgdls0vg
 
 Este repositório contém a evolução individual do projeto "PediuPatrão", desenvolvido como requisito para a Atividade Prática M1 do curso de Engenharia de Software. O foco principal desta iteração foi a implementação de um controlo rigoroso de acessos, gestão de fluxo de pedidos e um sistema robusto de auditoria.
