@@ -21,6 +21,7 @@ public class Pedido {
     private String responsavelSaida;
     private BigDecimal percentualDesconto = BigDecimal.ZERO;
     private StatusPedido status;
+    private FormaPagamento formaPagamento = FormaPagamento.NAO_INFORMADO;
     private String justificativaCancelamento;
     private BigDecimal valorTotal = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
@@ -29,11 +30,17 @@ public class Pedido {
 
     public Pedido(String clienteId, List<ItemPedido> itens, LocalDateTime dataHoraEntrada,
             String responsavelRegistro) {
+        this(clienteId, itens, dataHoraEntrada, responsavelRegistro, FormaPagamento.NAO_INFORMADO);
+    }
+
+    public Pedido(String clienteId, List<ItemPedido> itens, LocalDateTime dataHoraEntrada,
+            String responsavelRegistro, FormaPagamento formaPagamento) {
         this.clienteId = clienteId;
         this.itens = new ArrayList<>(itens);
         this.dataHoraEntrada = dataHoraEntrada;
         this.responsavelRegistro = responsavelRegistro;
         this.status = StatusPedido.RECEBIDO;
+        this.formaPagamento = formaPagamento == null ? FormaPagamento.NAO_INFORMADO : formaPagamento;
         recalcularValorTotal();
     }
 
@@ -46,6 +53,7 @@ public class Pedido {
     public String getResponsavelSaida() { return responsavelSaida; }
     public BigDecimal getPercentualDesconto() { return percentualDesconto; }
     public StatusPedido getStatus() { return status; }
+    public FormaPagamento getFormaPagamento() { return formaPagamento == null ? FormaPagamento.NAO_INFORMADO : formaPagamento; }
     public String getJustificativaCancelamento() { return justificativaCancelamento; }
     public BigDecimal getValorTotal() { return valorTotal; }
 

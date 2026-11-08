@@ -3,6 +3,7 @@ package com.umc.pediupatrao.service;
 import com.umc.pediupatrao.entity.Pedido;
 import com.umc.pediupatrao.entity.ItemPedido;
 import com.umc.pediupatrao.entity.StatusPedido;
+import com.umc.pediupatrao.entity.FormaPagamento;
 import com.umc.pediupatrao.entity.Auditoria.CampoModificado;
 import com.umc.pediupatrao.dto.ItemPedidoInput;
 import com.umc.pediupatrao.repository.PedidoRepository;
@@ -32,6 +33,10 @@ public class PedidoService {
     }
 
     public Pedido criarPedido(String clienteId, List<ItemPedidoInput> itensInput) {
+        return criarPedido(clienteId, itensInput, FormaPagamento.NAO_INFORMADO);
+    }
+
+    public Pedido criarPedido(String clienteId, List<ItemPedidoInput> itensInput, FormaPagamento formaPagamento) {
         if (clienteId == null || clienteId.isBlank() || itensInput == null || itensInput.isEmpty()) {
             throw new IllegalArgumentException("O cliente e pelo menos um item são obrigatórios.");
         }
@@ -57,7 +62,7 @@ public class PedidoService {
             return new ItemPedido(produto.getNome(), input.qtde(),
                     BigDecimal.valueOf(produto.getPreco()).setScale(2, java.math.RoundingMode.HALF_UP));
         }).toList();
-        Pedido pedido = new Pedido(clienteId, itens, LocalDateTime.now(), auditoriaService.usuarioAtual());
+        Pedido pedido = new Pedido(clienteId, itens, LocalDateTime.now(), auditoriaService.usuarioAtual(), formaPagamento);
         pedido = pedidoRepository.save(pedido);
         auditoriaService.registrar("CRIACAO", "Pedido", pedido.getId(),
                 java.util.Map.of(

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="container-fluid py-3" th:fragment="content">
+    <style>
+        .dashboard-title { color: #20252b; font-weight: 700; }
+        .dashboard-card { border: 0; border-radius: 14px; box-shadow: 0 5px 20px rgba(27, 39, 51, .07); }
+        .dashboard-card .card-body { padding: 1.25rem; }
+        .metric-label { color: #6c757d; font-size: .9rem; }
+        .metric-value { color: #20252b; font-size: 1.7rem; font-weight: 700; }
+        .chart-wrap { position: relative; min-height: 290px; }
+        .status-row { display:flex; justify-content:space-between; padding:.65rem 0; border-bottom:1px solid #edf0f2; }
+        .status-row:last-child { border-bottom:0; }
+    </style>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 dashboard-title mb-1">Dashboard administrativo</h1>
+            <p class="text-muted mb-0">Acompanhe vendas e pedidos no período selecionado.</p>
+        </div>
+        <form id="filtro-periodo" class="d-flex flex-wrap align-items-end gap-2">
+            <div><label for="dataInicio" class="form-label mb-1">De</label><input id="dataInicio" name="dataInicio" type="date" class="form-control" required></div>
+            <div><label for="dataFim" class="form-label mb-1">Até</label><input id="dataFim" name="dataFim" type="date" class="form-control" required></div>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>Aplicar</button>
+        </form>
+    </div>
+    <div id="dashboard-erro" class="alert alert-danger d-none" role="alert"></div>
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6 col-xl-3"><div class="card dashboard-card h-100"><div class="card-body"><div class="metric-label">Vendas no período</div><div id="total-vendas" class="metric-value mt-2">—</div></div></div></div>
+        <div class="col-12 col-md-6 col-xl-3"><div class="card dashboard-card h-100"><div class="card-body"><div class="metric-label">Pedidos não cancelados</div><div id="quantidade-pedidos" class="metric-value mt-2">—</div></div></div></div>
+        <div class="col-12 col-md-6 col-xl-3"><div class="card dashboard-card h-100"><div class="card-body"><div class="metric-label">Ticket médio</div><div id="ticket-medio" class="metric-value mt-2">—</div></div></div></div>
+        <div class="col-12 col-md-6 col-xl-3"><div id="card-taxa-cancelamento" class="card dashboard-card h-100"><div class="card-body"><div class="metric-label">Taxa de cancelamento</div><div id="taxa-cancelamento" class="metric-value mt-2">—</div><div id="quantidade-cancelados" class="small text-muted mt-1"></div></div></div></div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-xl-8"><div class="card dashboard-card h-100"><div class="card-body"><h2 class="h6 mb-3">Faturamento no período</h2><div class="chart-wrap"><canvas id="grafico-faturamento" aria-label="Gráfico de faturamento"></canvas></div></div></div></div>
+        <div class="col-12 col-xl-4"><div class="card dashboard-card h-100"><div class="card-body"><h2 class="h6 mb-3">Pedidos por status</h2><div id="lista-status" class="text-muted">Carregando…</div></div></div></div>
+        <div class="col-12"><div class="card dashboard-card"><div class="card-body"><h2 class="h6 mb-3">5 produtos mais vendidos</h2><div class="chart-wrap"><canvas id="grafico-produtos" aria-label="Gráfico dos produtos mais vendidos"></canvas></div></div></div></div>
+        <div class="col-12 col-xl-5"><div class="card dashboard-card h-100"><div class="card-body"><h2 class="h6 mb-3">Formas de pagamento</h2><div class="chart-wrap"><canvas id="grafico-pagamentos" aria-label="Divisão do faturamento por forma de pagamento"></canvas></div></div></div></div>
+        <div class="col-12 col-xl-7"><div class="card dashboard-card h-100"><div class="card-body"><h2 class="h6 mb-3">Horários de pico</h2><div class="chart-wrap"><canvas id="grafico-horarios" aria-label="Quantidade de pedidos por hora"></canvas></div></div></div></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (() => {
+            const form = document.getElementById('filtro-periodo');
+            const hoje = new Date();
+            const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+            document.getElementById('dataInicio').value = iso(new Date(hoje.getFullYear(), hoje.getMonth(), 1));
+            document.getElementById('dataFim').value = iso(hoje);
+            const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+            let faturamentoChart, produtosChart, pagamentosChart, horariosChart;
+            const coresPagamento = ['#0d6efd', '#20a779', '#ffc107', '#dc3545', '#6c757d', '#6610f2'];
+            const gradienteHoras = Array.from({ length: 24 }, (_, i) => {
+                const t = i / 23;
+                const a = [13, 110, 253], b = [32, 167, 121];
+                const rgb = a.map((v, k) => Math.round(v + (b[k] - v) * t));
+                return `rgb(${rgb.join(',')})`;
+            });
+            async function carregar() {
+                const erro = document.getElementById('dashboard-erro');
+                erro.classList.add('d-none');
+                const params = new URLSearchParams(new FormData(form));
+                if (params.get('dataFim') < params.get('dataInicio')) {
+                    erro.textContent = 'A data final deve ser igual ou posterior à data inicial.';
+                    erro.classList.remove('d-none'); return;
+                }
+                try {
+                    const base = '/api/admin/dashboard';
+                    const urls = ['indicadores', 'graficos', 'status', 'ranking-produtos', 'taxa-cancelamento', 'formas-pagamento', 'horarios-pico'];
+                    const respostas = await Promise.all(urls.map(async rota => {
+                        const r = await fetch(`${base}/${rota}?${params}`, { headers: { Accept: 'application/json' } });
+                        if (!r.ok) throw new Error(`Não foi possível carregar ${rota} (HTTP ${r.status}).`);
+                        return r.json();
+                    }));
+                    const [indicadores, pontos, status, ranking, cancelamentos, pagamentos, horarios] = respostas;
+                    document.getElementById('total-vendas').textContent = moeda.format(indicadores.totalVendas || 0);
+                    document.getElementById('quantidade-pedidos').textContent = new Intl.NumberFormat('pt-BR').format(indicadores.quantidadePedidos || 0);
+                    document.getElementById('ticket-medio').textContent = moeda.format(indicadores.ticketMedio || 0);
+                    const taxa = cancelamentos.taxaCancelamento || 0;
+                    const cartaoCancelamento = document.getElementById('card-taxa-cancelamento');
+                    const valorCancelamento = document.getElementById('taxa-cancelamento');
+                    valorCancelamento.textContent = `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(taxa)}%`;
+                    cartaoCancelamento.classList.toggle('border-danger', taxa > 5);
+                    valorCancelamento.classList.toggle('text-danger', taxa > 5);
+                    document.getElementById('quantidade-cancelados').textContent = `${cancelamentos.quantidadeCancelados || 0} de ${cancelamentos.totalPedidos || 0} pedido(s) no período`;
+                    document.getElementById('lista-status').innerHTML = status.map(s => `<div class="status-row"><span>${s.descricao}</span><strong>${s.quantidade}</strong></div>`).join('') || '<p>Nenhum pedido no período.</p>';
+                    if (faturamentoChart) faturamentoChart.destroy();
+                    faturamentoChart = new Chart(document.getElementById('grafico-faturamento'), {
+                        type: 'line', data: { labels: pontos.map(p => p.periodo), datasets: [{ label: 'Faturamento (R$)', data: pontos.map(p => p.faturamento), borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,.12)', fill: true, tension: .3 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => moeda.format(v) } } } }
+                    });
+                    if (produtosChart) produtosChart.destroy();
+                    produtosChart = new Chart(document.getElementById('grafico-produtos'), {
+                        type: 'bar', data: { labels: ranking.map(p => p.produto), datasets: [{ label: 'Unidades vendidas', data: ranking.map(p => p.quantidade), backgroundColor: '#20a779', borderRadius: 6 }] },
+                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+                    });
+                    if (pagamentosChart) pagamentosChart.destroy();
+                    pagamentosChart = new Chart(document.getElementById('grafico-pagamentos'), {
+                        type: 'doughnut',
+                        data: { labels: pagamentos.map(p => p.descricao), datasets: [{
+                            data: pagamentos.map(p => p.valorTotal),
+                            backgroundColor: pagamentos.map((_, i) => coresPagamento[i % coresPagamento.length]),
+                            borderWidth: 2, borderColor: '#fff'
+                        }] },
+                        options: { responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: {
+                                label: ctx => {
+                                    const p = pagamentos[ctx.dataIndex];
+                                    return `${p.descricao}: ${moeda.format(p.valorTotal)} (${p.quantidade} pedido(s))`;
+                                }
+                            } } } }
+                    });
+                    if (horariosChart) horariosChart.destroy();
+                    horariosChart = new Chart(document.getElementById('grafico-horarios'), {
+                        type: 'bar',
+                        data: { labels: horarios.map(h => h.rotulo), datasets: [{
+                            label: 'Pedidos', data: horarios.map(h => h.quantidade),
+                            backgroundColor: gradienteHoras, borderRadius: 5, maxBarThickness: 24
+                        }] },
+                        options: { responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+                    });
+                } catch (e) { erro.textContent = e.message || 'Erro ao carregar os dados do dashboard.'; erro.classList.remove('d-none'); }
+            }
+            form.addEventListener('submit', e => { e.preventDefault(); carregar(); });
+            carregar();
+        })();
+    </script>
+</section>
+</body>
+</html>

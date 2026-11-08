@@ -150,7 +150,7 @@ public class HomeController {
             model.addAttribute("content", "pedidos-form :: content");
             return "layout";
         }
-        pedidoService.criarPedido(pedidoForm.getClienteId(), pedidoForm.toInputs());
+        pedidoService.criarPedido(pedidoForm.getClienteId(), pedidoForm.toInputs(), pedidoForm.getFormaPagamento());
         redirectAttributes.addFlashAttribute("sucesso", "Pedido registrado.");
         return "redirect:/pedidos";
     }
@@ -159,8 +159,15 @@ public class HomeController {
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'ATENDENTE')")
     public String atualizarStatusWeb(@PathVariable String id, @RequestParam StatusPedido status,
             RedirectAttributes redirectAttributes) {
-        pedidoService.atualizarStatus(id, status);
-        redirectAttributes.addFlashAttribute("sucesso", "Status atualizado.");
+        try {
+            pedidoService.atualizarStatus(id, status);
+            redirectAttributes.addFlashAttribute("sucesso", "Status atualizado.");
+        } catch (RuntimeException exception) {
+            log.error("Falha ao atualizar status do pedido {} para {}", id, status, exception);
+            redirectAttributes.addFlashAttribute("erro",
+                    "Não foi possível atualizar o status do pedido. Atualize a lista e tente novamente."
+                            + (exception.getMessage() == null ? "" : " Detalhe: " + exception.getMessage()));
+        }
         return "redirect:/pedidos";
     }
 

@@ -5,6 +5,7 @@ import com.umc.pediupatrao.dto.DescontoRequest;
 import com.umc.pediupatrao.dto.ItemPedidoInput;
 import com.umc.pediupatrao.dto.TransicaoStatusRequest;
 import com.umc.pediupatrao.entity.Pedido;
+import com.umc.pediupatrao.entity.FormaPagamento;
 import com.umc.pediupatrao.service.PedidoService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,7 +33,7 @@ public class PedidoController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'GERENTE', 'ATENDENTE')")
     public Pedido criarPedido(@RequestBody @Valid CriarPedidoRequest request) {
-        return pedidoService.criarPedido(request.clienteId(), request.itens());
+        return pedidoService.criarPedido(request.clienteId(), request.itens(), request.formaPagamento());
     }
 
     @GetMapping
@@ -59,6 +60,9 @@ public class PedidoController {
         return pedidoService.cancelarPedido(id, request.justificativa());
     }
 
-    public record CriarPedidoRequest(String clienteId, List<@Valid ItemPedidoInput> itens) {
+    public record CriarPedidoRequest(String clienteId, List<@Valid ItemPedidoInput> itens, FormaPagamento formaPagamento) {
+        public CriarPedidoRequest(String clienteId, List<@Valid ItemPedidoInput> itens) {
+            this(clienteId, itens, FormaPagamento.NAO_INFORMADO);
+        }
     }
 }
